@@ -4,46 +4,47 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-//#include "LCS.cpp"
 #include <algorithm>
+#include <string>
+
 #include <set>
 
+
+#define ACCURACY 0.2
 
 using namespace std;
 
 class Vertex {
 private:
 	string fname;
-	string contents;
+	vector<int> contents;
 	set<Vertex*> neighbours;
 	bool visited = false;
 
 public:
-	Vertex(string fname , string contents) {
+	Vertex(string fname , vector<int> contents) {
 		this->fname = fname;
 		this->contents = contents;
 	}
 	void add_neighbour(Vertex* pnewVert) {
 		neighbours.insert(pnewVert);
 	}
-	set<Vertex*> get_neighbours(set<Vertex*>possible) {
-		if (this->visited) {
-			set<Vertex*> intersect;
-			set_intersection(possible.begin(), possible.end(), this->neighbours.begin(), this->neighbours.end(),
-			std::inserter(intersect, intersect.begin()));
-			//return intersect;
-		}
-		else {
-		}
+
+	set<Vertex*> get_neighbours() {
 		return neighbours;
+	}
+
+	vector<int> getContents() {
+		return this->contents;
+	}
+
+	string get_name() {
+		return this->fname;
 	}
 };
 
 
 class Graph {
-
-private:
-	map<string, Vertex* > vertices;
 
 public:
 	void add_edge(string v1_c, string v2_c) {
@@ -71,30 +72,91 @@ public:
 			return NULL;
 	}
 
-	Vertex* add_new_vertex(string fname, string contents) {
+	Vertex* add_new_vertex(string fname, vector<int> contents) {
 		return (vertices[fname] = new Vertex(fname, contents));
 	}
 
-	
-	/*
-	void writeout(string file) {
-		ofstream ofs(file);
-		vector<pair<pair<int, int>, pair<int, int>>>::iterator it;
-		for (it = result.begin(); it != result.end(); it++) {
-			ofs << "[" << it->first.first << "," << it->first.second << "] ";
-			ofs << "[" << it->second.first << "," << it->second.second << "]" << endl;
+	void cliqueFrom(string fname) {
+		calcNeighbors( fname, 20);
+		
+
+		//return NULL;
+	}
+
+	void calcNeighbors(string fname,int perc) {
+
+		Vertex * v1 = this->get_Vertex(fname);
+		
+		for (auto it = this->vertices.begin(); it != vertices.end(); it++) {
+			if ( it->second == v1)
+				continue;
+
+			if (is_neighbor_LCS(v1->getContents(),v1->getContents())) {
+				v1->add_neighbour(it->second);
+			}
+			else {
+				;
+			}
 		}
-		ofs.close();
+	
+	}
+
+	void writeout() {
+
+		for (map<string, Vertex* >::iterator it = vertices.begin(); it != vertices.end(); it++) {
+			set<Vertex*> tmp = it->second->get_neighbours();
+			for (set<Vertex*>::iterator tit = tmp.begin(); tit != tmp.end(); tit++) {
+				cout << it->first << endl;
+			}
+		}
+
 
 	}
 
-	void MATwriteout() {
-		ofstream ofs("matout.txt");
-		vector<pair<pair<int, int>, pair<int, int>>>::iterator it;
-		for (it = result.begin(); it != result.end(); it++) {
-			ofs << it->first.first << " " << it->first.second << " ";
-			ofs << it->second.first << " " << it->second.second << endl;
+private:
+	map<string, Vertex* > vertices;
+
+	set<Vertex*> my_intersect(set<Vertex*> a, set<Vertex*> b) {
+		set<Vertex*> intersect;
+		set_intersection(a.begin(), a.end(), b.begin(), b.end(),
+			std::inserter(intersect, intersect.begin()));
+		return intersect;
+	}
+
+	int is_neighbor_LCS(const vector<int> & X, const vector<int> & Y)
+	{
+		int m = X.size();
+		int n = Y.size();
+		int result = 0;  
+		int** LCSuff = new int*[m + 1];
+		for (int i = 0; i <= m; i++)
+			LCSuff[i] = new int[n + 1];
+
+		for (int i = 0; i <= m; i++)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				if (i == 0 || j == 0)
+					LCSuff[i][j] = 0;
+				else if (X[i - 1] == Y[j - 1])
+				{
+					LCSuff[i][j] = LCSuff[i - 1][j - 1] + 1;
+					result = max(result, LCSuff[i][j]);
+				}
+				else LCSuff[i][j] = 0;
+			}
 		}
-		ofs.close();
-	}*/
+		for (int i = 0; i <= m; i++)
+			delete LCSuff[i]; 
+		delete[] LCSuff;
+
+		return (result >= (ACCURACY * min(n, m)));
+
+	}
+
+
+
+
+
+
 };;

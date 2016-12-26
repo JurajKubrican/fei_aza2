@@ -1,7 +1,6 @@
 /* Dynamic Programming solution to find length of the
 longest common substring */
-#include<iostream>
-#include<string.h>
+
 using namespace std;
 
 // A utility function to find maximum of two integers
