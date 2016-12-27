@@ -7,39 +7,153 @@
 #include <algorithm>
 #include <string>
 
-#include <set>
-
+#include <thread>
+#include <future>
 
 #define ACCURACY 0.2
 
 using namespace std;
 
 class Vertex {
-private:
-	string fname;
-	vector<int> contents;
-	set<Vertex*> neighbours;
-	bool visited = false;
 
 public:
 	Vertex(string fname , vector<int> contents) {
 		this->fname = fname;
 		this->contents = contents;
 	}
-	void add_neighbour(Vertex* pnewVert) {
-		neighbours.insert(pnewVert);
+	
+
+	set<Vertex*> get_neighbours( set<Vertex*> possible) {
+		set<Vertex*> result;
+
+		//remove those who are cached not neighbors
+		set<Vertex*> notNeighbors = this->get_not_neighbours();
+		for (set<Vertex*>::iterator it = notNeighbors.begin(); it != notNeighbors.end(); ) {
+			possible.erase(it);
+		}
+
+
+		//remove those who are cached neighbors + add them to result
+		set<Vertex*> neighbors = this->get_neighbours();
+		for (set<Vertex*>::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+			result.insert(*it);
+			possible.erase(*it);
+		}
+
+
+		//calculate the rest + cache it	
+		vector<int> V1C = this->get_contents();
+		for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
+			if (*it == this)
+				continue;
+
+			vector<int>V2C = (*it)->get_contents();
+			if (is_neighbor_LCS(make_pair(V1C, V2C))) {
+				this->add_neighbour(*it);
+				result.insert(*it);
+			}
+			else {
+				this->add_not_neighbour(*it);
+			}
+		}
+		/*
+		vector<std::thread> threads;
+		vector<int> results;
+		for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
+			vector<int>V2C = (*it)->get_contents();
+			results.push_back(0);
+			threads.push_back(thread(&Vertex::is_neighbor_LCS, make_pair(V1C, V2C), results.back()));
+		}
+
+		for (std::vector<std::thread>::iterator it = threads.begin(); it != threads.end(); it++) {
+			(*it).join();
+			cout << results[0] << results[1] << results[2];
+		}
+		*/
+		return result;
+		//for(auto it = )
 	}
+
+
+	string get_name() {
+		return this->fname;
+	}
+	void list_neighbors() {
+	}
+
+private:
+	string fname;
+	vector<int> contents;
+	set<Vertex*> neighbours;
+	set<Vertex*> not_neighbors;
+	bool visited = false;
 
 	set<Vertex*> get_neighbours() {
 		return neighbours;
 	}
 
-	vector<int> getContents() {
+	void add_neighbour(Vertex* pnewVert) {
+		neighbours.insert(pnewVert);
+		pnewVert->add_neighbour2(this);
+	}
+	void add_neighbour2(Vertex* pnewVert) {
+		neighbours.insert(pnewVert);
+	}
+	void add_not_neighbour(Vertex* pnewVert) {
+		not_neighbors.insert(pnewVert);
+		pnewVert->add_not_neighbour2(this);
+	}
+	void add_not_neighbour2(Vertex* pnewVert) {
+		not_neighbors.insert(pnewVert);
+	}
+
+	set<Vertex*> get_not_neighbours() {
+		return not_neighbors;
+	}
+
+	vector<int> get_contents() {
 		return this->contents;
 	}
 
-	string get_name() {
-		return this->fname;
+	//int is_neighbor_LCS(const vector<int> & str1, const vector<int> & str2)
+	int is_neighbor_LCS( pair<vector<int>,vector<int>> in)
+	{
+		const vector<int> str1 = in.first;
+		const vector<int> str2 = in.second;
+
+		if (str1.empty() || str2.empty())
+			return 0;
+
+		int *curr = new int[str2.size()];
+		int *prev = new int[str2.size()];
+		int *swap = nullptr;
+		int maxSubstr = 0;
+
+		for (uint16_t i = 0; i < str1.size(); ++i){
+			for (uint16_t j = 0; j<str2.size(); ++j){
+				if (str1[i] != str2[j]){
+					curr[j] = 0;
+				}else{
+					if (i == 0 || j == 0){
+						curr[j] = 1;
+					}else{
+						curr[j] = 1 + prev[j - 1];
+					}
+					//The next if can be replaced with:
+					//maxSubstr = max(maxSubstr, curr[j]);
+					//(You need algorithm.h library for using max())
+					if (maxSubstr < curr[j]){
+						maxSubstr = curr[j];
+					}
+				}
+			}
+			swap = curr;
+			curr = prev;
+			prev = swap;
+		}
+		delete[] curr;
+		delete[] prev;
+		return (maxSubstr >= (ACCURACY * min(str2.size(), str1.size())));
 	}
 };
 
@@ -47,23 +161,6 @@ public:
 class Graph {
 
 public:
-	void add_edge(string v1_c, string v2_c) {
-		// Najst vrcholy
-		Vertex* v1 = get_Vertex(v1_c);
-		Vertex* v2 = get_Vertex(v2_c);
-
-		// Ak neexistuju, vytvorit ich
-		if (v1 == NULL) {
-			cout << "ERROR v1 does not exist";
-		}
-		if (v2 == NULL) {
-			cout << "ERROR v2 does not exist";
-		}
-
-		// Vytvorit hranu
-		v1->add_neighbour(v2);
-		v2->add_neighbour(v1);
-	}
 
 	Vertex* get_Vertex(string fname) {
 		if (vertices.find(fname) != vertices.end())
@@ -76,32 +173,27 @@ public:
 		return (vertices[fname] = new Vertex(fname, contents));
 	}
 
-	void cliqueFrom(string fname) {
-		calcNeighbors( fname, 20);
+	set<Vertex*> cliqueFrom(string fname) {
 		
-
-		//return NULL;
-	}
-
-	void calcNeighbors(string fname,int perc) {
-
-		Vertex * v1 = this->get_Vertex(fname);
-		
-		for (auto it = this->vertices.begin(); it != vertices.end(); it++) {
-			if ( it->second == v1)
-				continue;
-
-			if (is_neighbor_LCS(v1->getContents(),v1->getContents())) {
-				v1->add_neighbour(it->second);
-			}
-			else {
-				;
-			}
+		Vertex * V1 = this->get_Vertex(fname);
+		set<Vertex*> all;
+		for (map<string, Vertex* >::iterator it = vertices.begin(); it != vertices.end(); it++) {
+			all.insert(it->second);
 		}
-	
+		
+		set<Vertex*> iniR;
+		iniR.insert(V1);
+		set<Vertex*> iniP = V1->get_neighbours(all);
+		set<Vertex*> iniX;
+		set<Vertex*> max_clique = this->BronKerbosh(iniR, iniP, iniX);
+		
+		cout << max_clique.size();
+		return max_clique;
 	}
 
-	void writeout() {
+	
+
+	/*void writeout() {
 
 		for (map<string, Vertex* >::iterator it = vertices.begin(); it != vertices.end(); it++) {
 			set<Vertex*> tmp = it->second->get_neighbours();
@@ -111,9 +203,41 @@ public:
 		}
 
 
-	}
+	}*/
 
 private:
+	set<Vertex*> BronKerbosh(set<Vertex*>R, set<Vertex*>P, set<Vertex*>&X) {
+		set<Vertex*>max_clique;
+		if (P.size() == 0 && X.size() == 0) {
+			cout << "REPORTING AS MAX CLIQUE";
+			max_clique = R;
+			return max_clique;
+		}
+		cout << "clique: " << R.size() << "cadidates:" << P.size() << endl;
+		set<Vertex*> iterP(P);
+		for (set<Vertex*>::iterator it = iterP.begin(); it != iterP.end(); it++) {
+			cout << (*it)->get_name();
+			set<Vertex*>tmpN = (*it)->get_neighbours(P);
+			
+			set<Vertex*> tmpR(R); tmpR.insert(*it);
+			set<Vertex*> tmpP(my_intersect(P, tmpN));
+			set<Vertex*> tmpX = my_intersect(X, tmpN);
+			if (tmpR.size() + tmpP.size() > max_clique.size()) {
+				set<Vertex*> tmp_clique = BronKerbosh(tmpR, tmpP, tmpX);
+				if (max_clique.size() < tmp_clique.size()) {
+					max_clique = tmp_clique;
+				}
+			}
+			
+		
+			
+			if(P.find(*it) != P.end())
+				P.erase(*it);
+			X.insert(*it);
+		}
+		return max_clique;
+	};
+
 	map<string, Vertex* > vertices;
 
 	set<Vertex*> my_intersect(set<Vertex*> a, set<Vertex*> b) {
@@ -122,39 +246,6 @@ private:
 			std::inserter(intersect, intersect.begin()));
 		return intersect;
 	}
-
-	int is_neighbor_LCS(const vector<int> & X, const vector<int> & Y)
-	{
-		int m = X.size();
-		int n = Y.size();
-		int result = 0;  
-		int** LCSuff = new int*[m + 1];
-		for (int i = 0; i <= m; i++)
-			LCSuff[i] = new int[n + 1];
-
-		for (int i = 0; i <= m; i++)
-		{
-			for (int j = 0; j <= n; j++)
-			{
-				if (i == 0 || j == 0)
-					LCSuff[i][j] = 0;
-				else if (X[i - 1] == Y[j - 1])
-				{
-					LCSuff[i][j] = LCSuff[i - 1][j - 1] + 1;
-					result = max(result, LCSuff[i][j]);
-				}
-				else LCSuff[i][j] = 0;
-			}
-		}
-		for (int i = 0; i <= m; i++)
-			delete LCSuff[i]; 
-		delete[] LCSuff;
-
-		return (result >= (ACCURACY * min(n, m)));
-
-	}
-
-
 
 
 
