@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClCompile Include="Graph.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MyThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />

@@ -10,7 +10,10 @@
 #include <thread>
 #include <future>
 
+#include "MyThreadPool.cpp"
+
 #define ACCURACY 0.2
+#define THREAD_IT 1
 
 using namespace std;
 
@@ -40,38 +43,52 @@ public:
 			possible.erase(*it);
 		}
 
-
-		//calculate the rest + cache it	
-		vector<int> V1C = this->get_contents();
-		for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
-			if (*it == this)
-				continue;
-
-			vector<int>V2C = (*it)->get_contents();
-			if (is_neighbor_LCS(make_pair(V1C, V2C))) {
-				this->add_neighbour(*it);
-				result.insert(*it);
+		if (THREAD_IT) {
+			map<string, vector<int>> input;
+			map<string, Vertex*> ref;
+			for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
+				if (*it == this)
+					continue;
+				ref.insert(make_pair((*it)->get_name(), *it));
+				input.insert(make_pair((*it)->get_name(), (*it)->get_contents()));
 			}
-			else {
-				this->add_not_neighbour(*it);
+
+
+			MyThreadPool threadPool(this->get_contents(), input);
+			map<string, int> output = threadPool.get_result();
+
+			for (map<string, int>::iterator it = output.begin(); it != output.end(); it++) {
+				if (it->second == 1) {
+					//cout <<	ref[it->first]->get_name() << endl;
+					result.insert(ref[it->first]);
+					this->add_neighbour(ref[it->first]);
+				}
+				else {
+					this->add_not_neighbour(ref[it->first]);
+				}
+				
+			}
+		
+		}else{
+			//calculate the rest + cache it	
+			vector<int> V1C = this->get_contents();
+			for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
+				if (*it == this)
+					continue;
+
+				vector<int>V2C = (*it)->get_contents();
+				if (is_neighbor_LCS(make_pair(V1C, V2C))) {
+					this->add_neighbour(*it);
+					result.insert(*it);
+				}
+				else {
+					this->add_not_neighbour(*it);
+				}
 			}
 		}
-		/*
-		vector<std::thread> threads;
-		vector<int> results;
-		for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
-			vector<int>V2C = (*it)->get_contents();
-			results.push_back(0);
-			threads.push_back(thread(&Vertex::is_neighbor_LCS, make_pair(V1C, V2C), results.back()));
-		}
+		
 
-		for (std::vector<std::thread>::iterator it = threads.begin(); it != threads.end(); it++) {
-			(*it).join();
-			cout << results[0] << results[1] << results[2];
-		}
-		*/
 		return result;
-		//for(auto it = )
 	}
 
 
@@ -120,17 +137,20 @@ private:
 	{
 		const vector<int> str1 = in.first;
 		const vector<int> str2 = in.second;
+		int str1size = str1.size();
+		int str2size = str2.size();
+		int minSizeTreshold = ceil(min(str1size, str2size));
 
 		if (str1.empty() || str2.empty())
 			return 0;
 
-		int *curr = new int[str2.size()];
-		int *prev = new int[str2.size()];
+		int *curr = new int[str2size];
+		int *prev = new int[str2size];
 		int *swap = nullptr;
 		int maxSubstr = 0;
 
-		for (uint16_t i = 0; i < str1.size(); ++i){
-			for (uint16_t j = 0; j<str2.size(); ++j){
+		for (uint16_t i = 0; i < str1size; ++i){
+			for (uint16_t j = 0; j<str2size; ++j){
 				if (str1[i] != str2[j]){
 					curr[j] = 0;
 				}else{
@@ -144,7 +164,12 @@ private:
 					//(You need algorithm.h library for using max())
 					if (maxSubstr < curr[j]){
 						maxSubstr = curr[j];
+						if (maxSubstr >= minSizeTreshold) {
+							return true;
+						}
+							
 					}
+					
 				}
 			}
 			swap = curr;
@@ -187,23 +212,9 @@ public:
 		set<Vertex*> iniX;
 		set<Vertex*> max_clique = this->BronKerbosh(iniR, iniP, iniX);
 		
-		cout << max_clique.size();
 		return max_clique;
 	}
 
-	
-
-	/*void writeout() {
-
-		for (map<string, Vertex* >::iterator it = vertices.begin(); it != vertices.end(); it++) {
-			set<Vertex*> tmp = it->second->get_neighbours();
-			for (set<Vertex*>::iterator tit = tmp.begin(); tit != tmp.end(); tit++) {
-				cout << it->first << endl;
-			}
-		}
-
-
-	}*/
 
 private:
 	set<Vertex*> BronKerbosh(set<Vertex*>R, set<Vertex*>P, set<Vertex*>&X) {
@@ -214,7 +225,7 @@ private:
 			return max_clique;
 		}
 		cout << "clique: " << R.size() << "cadidates:" << P.size() << endl;
-		set<Vertex*> iterP(P);
+		set<Vertex*> iterP = P;
 		for (set<Vertex*>::iterator it = iterP.begin(); it != iterP.end(); it++) {
 			cout << (*it)->get_name();
 			set<Vertex*>tmpN = (*it)->get_neighbours(P);

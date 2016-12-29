@@ -91,6 +91,7 @@ vector<int> cleanFile(const string &s, map<string, int> &keywords, regex &words_
 	}
 	return output;
 }
+
 /*
 uint32_t rabin_karp_hash(string str) {
 	uint32_t hash = 0;
@@ -125,6 +126,18 @@ vector<int> rabin_karp_analyze(const string &s, vector<string> keywords ) {
 }
 */
 
+void writeout(set<Vertex*> vertices, string file) {
+	ofstream ofs(file);
+	for (set<Vertex* >::iterator it = vertices.begin(); it != vertices.end(); it++) {
+		cout << (*it)->get_name() << endl;
+		ofs << (*it)->get_name() << endl;
+	}
+	ofs.close();
+
+}
+
+
+
 int main(int argc, char *argv[]) {
 
 	char* files = argv[1];
@@ -138,64 +151,20 @@ int main(int argc, char *argv[]) {
 	vector<int> tmp_vec;
 	int i = 0;
 	for (auto it = filenames.begin(); it != filenames.end(); it++) {
-		//if (++i > 21 /*|| i < 20 && i > 10*/)
-			//continue;
 		
 		cout << *it << endl;
 		tmpfile = loadFile(*it);
-		//tmp_vec = rabin_karp_analyze(tmpfile, keywords);
 		regex reg = make_regex(keywords);
 		tmp_vec = cleanFile(tmpfile,keywords, reg);
 		all.add_new_vertex(*it, tmp_vec);
 	}
 
-	all.cliqueFrom(filenames[0]);
-	//all.writeout();
+	set<Vertex*> clique = all.cliqueFrom(filenames[0]);
+
+	writeout(clique, vystup);
+	
  	return 0;
 }
 
 
-int is_neighbor_LCS(pair<vector<int>, vector<int>> in)
-{
-	const vector<int> str1 = in.first;
-	const vector<int> str2 = in.second;
 
-	if (str1.empty() || str2.empty())
-		return 0;
-
-	int *curr = new int[str2.size()];
-	int *prev = new int[str2.size()];
-	int *swap = nullptr;
-	int maxSubstr = 0;
-
-	for (uint16_t i = 0; i < str1.size(); ++i) {
-		for (uint16_t j = 0; j<str2.size(); ++j) {
-			if (str1[i] != str2[j]) {
-				curr[j] = 0;
-			}
-			else {
-				if (i == 0 || j == 0) {
-					curr[j] = 1;
-				}
-				else {
-					curr[j] = 1 + prev[j - 1];
-				}
-				//The next if can be replaced with:
-				//maxSubstr = max(maxSubstr, curr[j]);
-				//(You need algorithm.h library for using max())
-				if (maxSubstr < curr[j]) {
-					maxSubstr = curr[j];
-				}
-			}
-		}
-		swap = curr;
-		curr = prev;
-		prev = swap;
-	}
-	delete[] curr;
-	delete[] prev;
-	double comp = (ACCURACY * min(str2.size(), str1.size()));
-	cout << comp << " =< ";
-	cout << maxSubstr << endl;
-	return (maxSubstr >= comp);
-}
