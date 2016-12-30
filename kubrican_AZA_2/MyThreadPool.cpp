@@ -62,13 +62,13 @@ private:
 
 	}
 
-	int is_neighbor_LCS(pair<vector<int>, vector<int>> in)
+	bool is_neighbor_LCS(pair<vector<int>, vector<int>> in)
 	{
 		const vector<int> str1 = in.first;
 		const vector<int> str2 = in.second;
-		int str1size = str1.size();
-		int str2size = str2.size();
-		int minSizeTreshold = ACCURACY * ceil(min(str1size, str2size));
+		size_t str1size = str1.size();
+		size_t str2size = str2.size();
+		int minSizeTreshold = ceil(ACCURACY * min(str1size, str2size));
 
 		if (str1.empty() || str2.empty())
 			return 0;
@@ -109,7 +109,7 @@ private:
 		}
 		delete[] curr;
 		delete[] prev;
-		return (maxSubstr >= (ACCURACY * min(str2.size(), str1.size())));
+		return false;
 	}
 
 

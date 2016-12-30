@@ -6,7 +6,7 @@
 #include <regex>
 #include <iterator>
 
-#define RK_BASE 101
+//#define RK_BASE 101
 //vstup.txt kslova.txt out.txt
 //vstup_lipsum.txt kslova_lipsum.txt out.txt
 
@@ -15,7 +15,7 @@ using namespace std;
 Graph all;
 
 
-
+//loads the keywords from file
 map<string,int> loadKeyWords(char * input ) {
 	string line;
 	map<string, int> out;
@@ -34,6 +34,7 @@ map<string,int> loadKeyWords(char * input ) {
 	return out;
 }
 
+//loads the file list from file
 vector<string> loadFileList(char * input) {
 
 	string line;
@@ -50,6 +51,7 @@ vector<string> loadFileList(char * input) {
 	return out;
 }
 
+//loads the file
 string loadFile(string input) {
 
 	string line;
@@ -67,6 +69,7 @@ string loadFile(string input) {
 	return out;
 }
 
+//prepairs the regex
 regex make_regex(map<string, int>keywords) {
 	
 
@@ -81,7 +84,7 @@ regex make_regex(map<string, int>keywords) {
 	return words_regex;
 }
 
-//TODO: get rid of REGEX
+//uses regex to change the file from string into a set of keyword indexes
 vector<int> cleanFile(const string &s, map<string, int> &keywords, regex &words_regex) {
 	vector<int> output;
 	auto words_begin = sregex_iterator(s.begin(), s.end(), words_regex);
@@ -92,6 +95,7 @@ vector<int> cleanFile(const string &s, map<string, int> &keywords, regex &words_
 	return output;
 }
 
+//rabin karp - slow
 /*
 uint32_t rabin_karp_hash(string str) {
 	uint32_t hash = 0;
@@ -126,6 +130,7 @@ vector<int> rabin_karp_analyze(const string &s, vector<string> keywords ) {
 }
 */
 
+//write to file
 void writeout(set<Vertex*> vertices, string file) {
 	ofstream ofs(file);
 	for (set<Vertex* >::iterator it = vertices.begin(); it != vertices.end(); it++) {
@@ -140,17 +145,20 @@ void writeout(set<Vertex*> vertices, string file) {
 
 int main(int argc, char *argv[]) {
 
+	//arguments
 	char* files = argv[1];
 	char* keyword_file = argv[2];
 	char* vystup = argv[3];
 
+
+	//load files
 	map<string,int> keywords = loadKeyWords(keyword_file);
 	vector<string> filenames = loadFileList(files);
 
 	string tmpfile;
 	vector<int> tmp_vec;
 	int i = 0;
-	for (auto it = filenames.begin(); it != filenames.end(); it++) {
+	for (vector<string>::iterator it = filenames.begin(); it != filenames.end(); it++) {
 		
 		cout << *it << endl;
 		tmpfile = loadFile(*it);
@@ -159,11 +167,11 @@ int main(int argc, char *argv[]) {
 		all.add_new_vertex(*it, tmp_vec);
 	}
 
+	// clique
 	set<Vertex*> clique = all.cliqueFrom(filenames[0]);
 
 	writeout(clique, vystup);
-	
- 	return 0;
+	 	return 0;
 }
 
 

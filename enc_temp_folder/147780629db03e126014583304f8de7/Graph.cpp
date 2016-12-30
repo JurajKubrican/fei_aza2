@@ -158,6 +158,9 @@ private:
 					}else{
 						curr[j] = 1 + prev[j - 1];
 					}
+					//The next if can be replaced with:
+					//maxSubstr = max(maxSubstr, curr[j]);
+					//(You need algorithm.h library for using max())
 					if (maxSubstr < curr[j]){
 						maxSubstr = curr[j];
 						if (maxSubstr >= minSizeTreshold) {
