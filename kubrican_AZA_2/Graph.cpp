@@ -14,7 +14,7 @@
 
 #define ACCURACY 0.2
 //TO multithread or not t
-#define THREAD_IT 0
+#define THREAD_IT 1
 
 using namespace std;
 
@@ -26,7 +26,7 @@ public:
 		this->contents = contents;
 	}
 	
-
+	//cahced get neighbors
 	set<Vertex*> get_neighbours( set<Vertex*> possible) {
 		set<Vertex*> result;
 
@@ -45,6 +45,7 @@ public:
 		}
 
 		if (THREAD_IT) {
+			//multithreaded prepairation
 			map<string, vector<int>> input;
 			map<string, Vertex*> ref;
 			for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
@@ -57,7 +58,7 @@ public:
 
 			MyThreadPool threadPool(this->get_contents(), input);
 			map<string, int> output = threadPool.get_result();
-
+			//calculate + cache
 			for (map<string, int>::iterator it = output.begin(); it != output.end(); it++) {
 				if (it->second == 1) {
 					//cout <<	ref[it->first]->get_name() << endl;
@@ -71,6 +72,7 @@ public:
 			}
 		
 		}else{
+			//single threaded
 			//calculate the rest + cache it	
 			vector<int> V1C = this->get_contents();
 			for (set<Vertex*>::iterator it = possible.begin(); it != possible.end(); it++) {
@@ -96,7 +98,8 @@ public:
 	string get_name() {
 		return this->fname;
 	}
-	void list_neighbors() {
+	int get_size() {
+		return this->contents.size();
 	}
 
 private:
@@ -132,12 +135,14 @@ private:
 		return this->contents;
 	}
 
+	//takes less memory than the originla implemewnation
 	int is_neighbor_LCS( pair<vector<int>,vector<int>> in)
 	{
 		const vector<int> str1 = in.first;
 		const vector<int> str2 = in.second;
 		int str1size = str1.size();
 		int str2size = str2.size();
+		//optimalization:
 		int minSizeTreshold = ceil(min(str1size, str2size));
 
 		if (str1.empty() || str2.empty())
@@ -158,6 +163,7 @@ private:
 					}else{
 						curr[j] = 1 + prev[j - 1];
 					}
+					//return immediately after found > 20% 
 					if (maxSubstr < curr[j]){
 						maxSubstr = curr[j];
 						if (maxSubstr >= minSizeTreshold) {
@@ -221,12 +227,18 @@ private:
 			return max_clique;
 		}
 		cout << "clique: " << R.size() << "cadidates:" << P.size() << endl;
-		set<Vertex*> iterP = P;
-		for (set<Vertex*>::iterator it = iterP.begin(); it != iterP.end(); it++) {
+		//Optimalization: vertex ordering
+		map<int, Vertex*> ordered;
+		for (set<Vertex*>::iterator it = P.begin(); it != P.end(); it++) {
+			ordered.insert(make_pair((*it)->get_size(),(*it)));
+		}
+
+		for (map<int,Vertex*>::iterator it = ordered.begin(); it != ordered.end(); it++) {
+
 			//cout << (*it)->get_name();
-			set<Vertex*>tmpN = (*it)->get_neighbours(P);
+			set<Vertex*>tmpN = it->second->get_neighbours(P);
 			
-			set<Vertex*> tmpR(R); tmpR.insert(*it);
+			set<Vertex*> tmpR(R); tmpR.insert(it->second );
 			set<Vertex*> tmpP(my_intersect(P, tmpN));
 			set<Vertex*> tmpX = my_intersect(X, tmpN);
 			if (tmpR.size() + tmpP.size() > max_clique.size()) {
@@ -238,9 +250,9 @@ private:
 			
 		
 			
-			if(P.find(*it) != P.end())
-				P.erase(*it);
-			X.insert(*it);
+			if(P.find(it->second) != P.end())
+				P.erase(it->second);
+			X.insert(it->second);
 		}
 		return max_clique;
 	};
